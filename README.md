@@ -338,7 +338,7 @@ If you find this work useful, please cite:
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [RSNA](https://www.rsna.org/) for organizing the 2022 Cervical Spine Fracture Detection competition and providing the dataset
 - **Dr. Adam Mushtak**, **Dr. Israa Al-Hashimi**, and **Dr. Sohaib Bassam Zoghoul** from Hamad Medical Corporation for their expert radiological assessments in the inter-observer study

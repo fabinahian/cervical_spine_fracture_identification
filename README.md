@@ -49,11 +49,11 @@ Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggl
 A key component of this work is the **inter-observer agreement study** comparing model predictions against expert radiologist assessments.
 
 ### Expert Panel
-|    Name     |             |
+|    Name     | Designation |
 |-------------|-------------|
-| Dr. Adam Mushtak | Clinical Radiology Expert |
-| Dr. Israa Al-Hashimi | Clinical Radiology Expert |
-| Dr. Sohaib Bassam Zoghoul | Clinical Radiology Expert |
+| Dr. Adam Mushtak | Diagnostic Radiologist at Hamad Medical Corporation |
+| Dr. Israa Al-Hashimi | Radiology resident at Hamad Medical Corporation |
+| Dr. Sohaib Bassam Zoghoul | Diagnostic and interventional radiologist at Hamad Medical Corporation |
 
 ### Agreement Metrics
 

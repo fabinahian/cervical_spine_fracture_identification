@@ -49,7 +49,7 @@ Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggl
 A key component of this work is the **inter-observer agreement study** comparing model predictions against expert radiologist assessments.
 
 ### Expert Panel
-
+|    Name     |             |
 |-------------|-------------|
 | Dr. Adam Mushtak | Clinical Radiology Expert |
 | Dr. Israa Al-Hashimi | Clinical Radiology Expert |

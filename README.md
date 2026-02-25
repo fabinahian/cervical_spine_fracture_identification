@@ -41,8 +41,6 @@ Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggl
 | **Patient-Level F1** | 82.26 |
 | **Vertebra-Level F1** | 68.15 |
 
-> **Note**: This work does not claim state-of-the-art performance. Instead, it demonstrates that projection-based VOI approximation can replace expensive 3D segmentation while maintaining competitive diagnostic accuracy.
-
 ---
 
 ## 🏗️ Pipeline Architecture
@@ -114,8 +112,8 @@ Vertebra-Level Probabilities + Patient-Level Prediction
 
 ```bash
 # Clone the repository
-git clone https://github.com/Rusab/CervicalSpineFractureIdentification.git
-cd CervicalSpineFractureIdentification
+git clone https://github.com/fabinahian/cervical_spine_fracture_identification.git
+cd cervical_spine_fracture_identification
 
 # Create virtual environment (recommended)
 python -m venv venv
@@ -297,6 +295,6 @@ This project is licensed under the MIT License — see [LICENSE](LICENSE) for de
 
 <div align="center">
 
-**Questions or Issues?** Please open an [issue](https://github.com/Rusab/CervicalSpineFractureIdentification/issues) on GitHub.
+**Questions or Issues?** Please open an [issue](https://github.com/fabinahian/cervical_spine_fracture_identification.git) on GitHub.
 
 </div>

@@ -17,7 +17,7 @@
 
 ## 🔬 Overview
 
-This repository provides the official implementation for detecting cervical vertebra (C1–C7) fractures from CT volumes using a novel **projection-driven pipeline**. Instead of computationally expensive full 3D segmentation, we approximate 3D vertebra volumes through optimized 2D axial, sagittal, and coronal projections, enabling efficient fracture identification with substantially lower compute requirements.
+This repository provides the official implementation for detecting cervical vertebra (C1–C7) fractures from CT volumes using a novel **projection-driven pipeline**. Instead of relying on full 3D segmentation networks, we approximate 3D vertebra volumes through optimized 2D axial, sagittal, and coronal projections—reducing the problem dimensionality while preserving the anatomical context necessary for accurate fracture identification.
 
 <div align="center">
 <img src="assets/pipeline.png" alt="Pipeline Overview" width="90%"/>
@@ -27,7 +27,8 @@ This repository provides the official implementation for detecting cervical vert
 
 - **Projection-Driven VOI Extraction**: Traces 3D cervical anatomy using variance and energy-based 2D projections, reconstructing approximate 3D vertebra masks from 2D localization and multi-label segmentation
 - **2.5D Spatio-Sequential CNN-Transformer**: A novel ensemble architecture that captures spatial and sequential context across vertebra volumes for fracture classification
-- **Compute Efficiency**: Achieves comparable performance to full 3D approaches while significantly reducing computational overhead
+- **Dimensionality Reduction**: Reformulates 3D segmentation as a 2D projection problem, offering an alternative pathway that sidesteps dense volumetric processing
+- **Clinical Validation**: Inter-observer study with three expert radiologists using Cohen's κ and Fleiss' κ to benchmark model performance against human readers
 - **Clinical Realism**: Validated on the highly imbalanced RSNA 2022 dataset without artificial balancing
 
 ---
@@ -40,6 +41,26 @@ Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggl
 |--------|-------|
 | **Patient-Level F1** | 82.26 |
 | **Vertebra-Level F1** | 68.15 |
+
+---
+
+## 👨‍⚕️ Clinical Validation
+
+A key component of this work is the **inter-observer agreement study** comparing model predictions against expert radiologist assessments.
+
+### Expert Panel
+
+|-------------|-------------|
+| Dr. Adam Mushtak | Clinical Radiology Expert |
+| Dr. Israa Al-Hashimi | Clinical Radiology Expert |
+| Dr. Sohaib Bassam Zoghoul | Clinical Radiology Expert |
+
+### Agreement Metrics
+
+- **Cohen's Kappa (κ)**: Pairwise agreement between model and each individual radiologist
+- **Fleiss' Kappa (κ)**: Multi-rater agreement across all three radiologists and the model
+
+This inter-observer analysis contextualizes model performance within the inherent variability of expert human readers, providing clinically meaningful benchmarks beyond standard machine learning metrics.
 
 ---
 
@@ -70,6 +91,60 @@ Vertebra-Level Probabilities + Patient-Level Prediction
 | **4** | Reconstruct 3D vertebra volumes from 2D masks | Individual vertebra VOIs |
 | **5** | Classify each vertebra using 2.5D CNN-Transformer | Fracture probabilities |
 | **6** | Fuse predictions via adaptive ensemble | Final diagnosis |
+
+---
+
+## 🖥️ Visualization Dashboard
+
+An interactive Qt-based dashboard visualizes every stage of the pipeline in real-time. Click any completed stage in the sidebar to inspect its outputs.
+
+```bash
+python visualize.py --dicom-dir "ct_volumes/your_study_id"
+```
+
+<div align="center">
+
+### Stage 1: Variance Projections
+<img src="assets/ui_stage1.jpg" alt="Stage 1 — Variance Projections" width="700"/>
+
+*Generates variance-based 2D projections across sagittal, coronal, and axial planes from the input CT volume.*
+
+---
+
+### Stage 2: VOI Detection
+<img src="assets/ui_stage2.jpg" alt="Stage 2 — VOI Detection" width="700"/>
+
+*YOLOv8 localizes the cervical spine region and crops the Volume of Interest (VOI).*
+
+---
+
+### Stage 3: Multi-label Segmentation
+<img src="assets/ui_stage3.jpg" alt="Stage 3 — Multi-label Segmentation" width="700"/>
+
+*U-Net performs multi-label semantic segmentation to identify individual vertebrae (C1–C7) in 2D projections.*
+
+---
+
+### Stage 4: Per-Vertebra VOI Extraction
+<img src="assets/ui_stage4.jpg" alt="Stage 4 — Per-Vertebra VOI Extraction" width="700"/>
+
+*Reconstructs approximate 3D vertebra volumes from 2D segmentation masks for each cervical level.*
+
+---
+
+### Stage 5: Fracture Classification
+<img src="assets/ui_stage5.jpg" alt="Stage 5 — Fracture Classification" width="700"/>
+
+*2.5D CNN-Transformer models classify each vertebra VOI for fracture presence.*
+
+---
+
+### Stage 6: Ensemble Fusion & Final Prediction
+<img src="assets/ui_stage6.jpg" alt="Stage 6 — Ensemble Fusion" width="700"/>
+
+*Adaptive ensemble fusion combines model outputs to produce vertebra-level and patient-level predictions.*
+
+</div>
 
 ---
 
@@ -134,7 +209,7 @@ Place the contents into the `weights/` and `ct_volumes/` directories respectivel
 
 ---
 
-## 🚀 Usage
+##  Usage
 
 ### 1. Configure Paths
 
@@ -159,27 +234,6 @@ python run.py --dicom-dir "ct_volumes/your_study_id" --save-intermediates
 # Enable verbose logging
 python run.py --verbose
 ```
-
-### 3. Interactive Visualization Dashboard
-
-Launch the Qt-based dashboard to visualize each pipeline stage:
-
-```bash
-python visualize.py --dicom-dir "ct_volumes/your_study_id"
-```
-
-<div align="center">
-<table>
-<tr>
-<td><img src="assets/ui_stage1.jpg" alt="Stage 1 Visualization" width="400"/></td>
-<td><img src="assets/ui_stage6.jpg" alt="Stage 6 Visualization" width="400"/></td>
-</tr>
-<tr>
-<td align="center"><em>Stage 1: Variance Projections</em></td>
-<td align="center"><em>Stage 6: Final Predictions</em></td>
-</tr>
-</table>
-</div>
 
 ---
 
@@ -245,13 +299,13 @@ This work uses the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kag
 
 ### Why Projections Instead of 3D Segmentation?
 
-Traditional approaches require computationally expensive 3D segmentation networks. Our key insight is that **optimized 2D projections** (variance and energy-based) can capture sufficient anatomical information to:
+Traditional approaches rely on 3D segmentation networks that operate directly on volumetric data. Our key insight is that **optimized 2D projections** (variance and energy-based) can capture sufficient anatomical information to:
 
 1. Localize the cervical spine region
 2. Segment individual vertebrae (C1–C7)
 3. Approximate 3D vertebra volumes for downstream classification
 
-This reduces computational requirements while maintaining diagnostic accuracy.
+By reformulating the problem through 2D projections, we reduce dimensionality while retaining the spatial relationships necessary for accurate vertebra delineation—offering an alternative to dense 3D processing pipelines.
 
 ### 2.5D Spatio-Sequential Architecture
 
@@ -259,6 +313,10 @@ Our fracture classifier combines:
 - **Spatial features** from 2D CNN encoders processing axial slices
 - **Sequential context** via Transformer modules that model inter-slice dependencies
 - **Ensemble fusion** across complementary model variants for robust predictions
+
+### Inter-Observer Benchmarking
+
+To contextualize automated performance, we conducted an inter-observer study where three expert radiologists independently assessed fracture presence. Model predictions were compared against each reader using Cohen's κ and across all raters using Fleiss' κ, situating algorithmic accuracy within the spectrum of human expert variability.
 
 ---
 
@@ -283,6 +341,7 @@ If you find this work useful, please cite:
 ## 🙏 Acknowledgments
 
 - [RSNA](https://www.rsna.org/) for organizing the 2022 Cervical Spine Fracture Detection competition and providing the dataset
+- **Dr. Adam Mushtak**, **Dr. Israa Al-Hashimi**, and **Dr. Sohaib Bassam Zoghoul** for their expert radiological assessments in the inter-observer study
 - The medical imaging community for foundational work in spine analysis
 
 ---
@@ -295,6 +354,6 @@ This project is licensed under the MIT License — see [LICENSE](LICENSE) for de
 
 <div align="center">
 
-**Questions or Issues?** Please open an [issue](https://github.com/fabinahian/cervical_spine_fracture_identification.git) on GitHub.
+**Questions or Issues?** Please open an [issue](https://github.com/fabinahian/cervical_spine_fracture_identification/issues) on GitHub.
 
 </div>

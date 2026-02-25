@@ -54,7 +54,7 @@ A key component of this work is the **inter-observer agreement study** comparing
 |-------------|-------------------|
 | [Dr. Adam Mushtak](https://scholar.google.com/citations?user=1s3pZBQAAAAJ&hl=en) | Diagnostic Radiologist at Hamad Medical Corporation |
 | [Dr. Israa Al-Hashimi](https://scholar.google.com/citations?user=f1XBd0QAAAAJ&hl=en) | Radiology Resident at Hamad Medical Corporation |
-| Dr. Sohaib Bassam Zoghoul | Diagnostic and Interventional Radiologist at Hamad Medical Corporation |
+| [Dr. Sohaib Bassam Zoghoul](https://scholar.google.com/citations?user=3ZvCHjoAAAAJ&hl=en) | Diagnostic and Interventional Radiologist at Hamad Medical Corporation |
 
 ### Agreement Metrics
 

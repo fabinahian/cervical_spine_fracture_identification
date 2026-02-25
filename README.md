@@ -49,11 +49,12 @@ Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggl
 A key component of this work is the **inter-observer agreement study** comparing model predictions against expert radiologist assessments.
 
 ### Expert Panel
-|    Name     | Designation |
-|-------------|-------------|
-| Dr. Adam Mushtak | Diagnostic Radiologist at Hamad Medical Corporation |
-| Dr. Israa Al-Hashimi | Radiology resident at Hamad Medical Corporation |
-| Dr. Sohaib Bassam Zoghoul | Diagnostic and interventional radiologist at Hamad Medical Corporation |
+
+| Radiologist | Role & Affiliation |
+|-------------|-------------------|
+| [Dr. Adam Mushtak](https://scholar.google.com/citations?user=1s3pZBQAAAAJ&hl=en) | Diagnostic Radiologist at Hamad Medical Corporation |
+| [Dr. Israa Al-Hashimi](https://scholar.google.com/citations?user=f1XBd0QAAAAJ&hl=en) | Radiology Resident at Hamad Medical Corporation |
+| Dr. Sohaib Bassam Zoghoul | Diagnostic and Interventional Radiologist at Hamad Medical Corporation |
 
 ### Agreement Metrics
 
@@ -104,45 +105,44 @@ python visualize.py --dicom-dir "ct_volumes/your_study_id"
 
 <div align="center">
 
-### Stage 1: Variance Projections
-<img src="assets/ui_stage1.jpg" alt="Stage 1 — Variance Projections" width="700"/>
-
-*Generates variance-based 2D projections across sagittal, coronal, and axial planes from the input CT volume.*
-
----
-
-### Stage 2: VOI Detection
-<img src="assets/ui_stage2.jpg" alt="Stage 2 — VOI Detection" width="700"/>
-
-*YOLOv8 localizes the cervical spine region and crops the Volume of Interest (VOI).*
-
----
-
-### Stage 3: Multi-label Segmentation
-<img src="assets/ui_stage3.jpg" alt="Stage 3 — Multi-label Segmentation" width="700"/>
-
-*U-Net performs multi-label semantic segmentation to identify individual vertebrae (C1–C7) in 2D projections.*
-
----
-
-### Stage 4: Per-Vertebra VOI Extraction
-<img src="assets/ui_stage4.jpg" alt="Stage 4 — Per-Vertebra VOI Extraction" width="700"/>
-
-*Reconstructs approximate 3D vertebra volumes from 2D segmentation masks for each cervical level.*
-
----
-
-### Stage 5: Fracture Classification
-<img src="assets/ui_stage5.jpg" alt="Stage 5 — Fracture Classification" width="700"/>
-
-*2.5D CNN-Transformer models classify each vertebra VOI for fracture presence.*
-
----
-
-### Stage 6: Ensemble Fusion & Final Prediction
-<img src="assets/ui_stage6.jpg" alt="Stage 6 — Ensemble Fusion" width="700"/>
-
-*Adaptive ensemble fusion combines model outputs to produce vertebra-level and patient-level predictions.*
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="assets/ui_stage1.jpg" alt="Stage 1" width="100%"/><br/>
+<b>Stage 1: Variance Projections</b><br/>
+<em>Generates variance-based 2D projections across sagittal, coronal, and axial planes</em>
+</td>
+<td align="center" width="50%">
+<img src="assets/ui_stage2.jpg" alt="Stage 2" width="100%"/><br/>
+<b>Stage 2: VOI Detection</b><br/>
+<em>YOLOv8 localizes the cervical spine region and crops the VOI</em>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="assets/ui_stage3.jpg" alt="Stage 3" width="100%"/><br/>
+<b>Stage 3: Multi-label Segmentation</b><br/>
+<em>U-Net segments individual vertebrae (C1–C7) in 2D projections</em>
+</td>
+<td align="center">
+<img src="assets/ui_stage4.jpg" alt="Stage 4" width="100%"/><br/>
+<b>Stage 4: Per-Vertebra VOI Extraction</b><br/>
+<em>Reconstructs 3D vertebra volumes from 2D segmentation masks</em>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="assets/ui_stage5.jpg" alt="Stage 5" width="100%"/><br/>
+<b>Stage 5: Fracture Classification</b><br/>
+<em>2.5D CNN-Transformer classifies each vertebra for fracture presence</em>
+</td>
+<td align="center">
+<img src="assets/ui_stage6.jpg" alt="Stage 6" width="100%"/><br/>
+<b>Stage 6: Ensemble Fusion</b><br/>
+<em>Adaptive fusion produces vertebra-level and patient-level predictions</em>
+</td>
+</tr>
+</table>
 
 </div>
 
@@ -209,7 +209,7 @@ Place the contents into the `weights/` and `ct_volumes/` directories respectivel
 
 ---
 
-##  Usage
+## Usage
 
 ### 1. Configure Paths
 
@@ -341,7 +341,7 @@ If you find this work useful, please cite:
 ## 🙏 Acknowledgments
 
 - [RSNA](https://www.rsna.org/) for organizing the 2022 Cervical Spine Fracture Detection competition and providing the dataset
-- **Dr. Adam Mushtak**, **Dr. Israa Al-Hashimi**, and **Dr. Sohaib Bassam Zoghoul** for their expert radiological assessments in the inter-observer study
+- **Dr. Adam Mushtak**, **Dr. Israa Al-Hashimi**, and **Dr. Sohaib Bassam Zoghoul** from Hamad Medical Corporation for their expert radiological assessments in the inter-observer study
 - The medical imaging community for foundational work in spine analysis
 
 ---

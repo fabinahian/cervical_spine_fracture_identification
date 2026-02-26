@@ -1,3 +1,5 @@
+# path: scripts/stage2_voi.py
+
 """
 Stage 2 — YOLO detection and Volume of Interest extraction.
 

@@ -1,3 +1,5 @@
+# path: scripts/stage1_projections.py
+
 """
 Stage 1 — Variance projections.
 

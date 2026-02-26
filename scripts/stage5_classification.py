@@ -1,3 +1,5 @@
+# path: scripts/stage5_classification.py
+
 """
 Stage 5 — Vertebra-level fracture classification.
 

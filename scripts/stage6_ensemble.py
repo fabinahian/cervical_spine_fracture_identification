@@ -1,3 +1,5 @@
+# path: scripts/stage6_ensemble.py
+
 """
 Stage 6 — Ensemble fusion.
 

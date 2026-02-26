@@ -1,3 +1,5 @@
+# path: scripts/stage3_segmentation.py
+
 """
 Stage 3 — Multilabel U-Net segmentation.
 

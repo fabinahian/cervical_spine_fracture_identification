@@ -1,3 +1,5 @@
+# path: scripts/stage4_vertebra_vois.py
+
 """
 Stage 4 — Per-vertebra VOI extraction.
 

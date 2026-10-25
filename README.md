@@ -35,12 +35,14 @@ This repository provides the official implementation for detecting cervical vert
 
 ## 📊 Performance
 
-Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggle.com/competitions/rsna-2022-cervical-spine-fracture-detection) dataset using **5-fold patient-wise cross-validation**:
+Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggle.com/competitions/rsna-2022-cervical-spine-fracture-detection) dataset using **5-fold patient-wise cross-validation** (all 2,019 patients / 14,133 vertebrae; mean ± SD over the five test folds; a vertebra without a VOI is scored as non-fractured):
 
-| Metric | Score |
-|--------|-------|
-| **Patient-Level F1** | 82.26 |
-| **Vertebra-Level F1** | 68.15 |
+| Level | Accuracy | Precision | Sensitivity | Specificity | F1 | ROC-AUC | AUPRC |
+|-------|----------|-----------|-------------|-------------|----|---------|-------|
+| **Vertebra** | 94.51 ± 0.69 | 84.16 ± 4.82 | 57.49 ± 4.30 | 98.74 ± 0.47 | 68.15 ± 2.80 | 91.63 ± 0.99 | 75.64 ± 1.37 |
+| **Patient** (adaptive threshold) | 83.06 ± 3.13 | 82.12 ± 4.64 | 82.51 ± 1.74 | 83.56 ± 4.75 | 82.28 ± 3.05 | 90.95 ± 1.47 | 92.00 ± 1.15 |
+
+The fold assignment is provided in [`folds/`](folds) and the statistical code in [`stats/`](stats) (see [Reproducing the evaluation](#-reproducing-the-evaluation)).
 
 ---
 
@@ -86,12 +88,12 @@ Vertebra-Level Probabilities + Patient-Level Prediction
 
 | Stage | Description | Output |
 |-------|-------------|--------|
-| **1** | Generate variance-based projections across three orthogonal planes | 2D projection images |
-| **2** | Detect cervical spine ROI using YOLOv8 | Cropped VOI volume |
-| **3** | Multi-label semantic segmentation of C1–C7 | Per-vertebra 2D masks |
-| **4** | Reconstruct 3D vertebra volumes from 2D masks | Individual vertebra VOIs |
-| **5** | Classify each vertebra using 2.5D CNN-Transformer | Fracture probabilities |
-| **6** | Fuse predictions via adaptive ensemble | Final diagnosis |
+| **1** | Variance projections in three orthogonal planes, with cascaded slice selection: sagittal over a fixed range, coronal over the sagittal detection's extent, axial over the mean vertical extent of the sagittal and coronal detections | 2D projection images |
+| **2** | Detect the cervical spine on each projection with YOLOv8 and fuse the three boxes into a 3D crop; compute energy projections of the crop | Cropped VOI volume |
+| **3** | Multi-label segmentation of C1–C7 on the sagittal and coronal energy projections (U-Net, DenseNet encoder) | Per-vertebra 2D masks |
+| **4** | Extrude and intersect the two 2D masks to obtain each vertebra's 3D VOI | Individual vertebra VOIs |
+| **5** | Classify each vertebra with two 2.5D CNN-Transformers: axial slice stacks, and stacks of maximum-intensity projections | Fracture probabilities |
+| **6** | Average the two models per vertebra (threshold 0.5); patient level uses an agreement-adaptive threshold on the maximum vertebra score | Final diagnosis |
 
 ---
 
@@ -158,6 +160,19 @@ python visualize.py --dicom-dir "ct_volumes/your_study_id"
 ├── visualize.py              # Interactive Qt-based visualization dashboard
 ├── requirements.txt          # Python dependencies
 │
+├── folds/                    # 5-fold cross-validation splits (classification and segmentation)
+│   ├── classification_folds.csv
+│   └── segmentation_folds.csv
+│
+├── stats/                    # 95% CIs and significance tests used in the paper
+│   └── ci95.py
+│
+├── seg3d_pipeline/           # Comparison arm: 3D U-Net segmentation instead of projections
+│   ├── config_3d.py
+│   ├── model_3d.py
+│   └── stages_3d.py
+├── compare_pipelines.py      # Run both arms on one study, side by side
+│
 ├── scripts/                  # Modular stage implementations
 │   ├── stage1_projections.py
 │   ├── stage2_voi.py
@@ -167,6 +182,7 @@ python visualize.py --dicom-dir "ct_volumes/your_study_id"
 │   └── stage6_ensemble.py
 │
 ├── weights/                  # Pretrained model weights (download separately)
+├── weights_3d/               # Weights of the 3D-segmentation comparison arm (download separately)
 ├── ct_volumes/               # Input DICOM studies (one folder per study)
 ├── results/                  # Final predictions (created at runtime)
 ├── intermediates/            # Stage outputs (with --save-intermediates)
@@ -206,6 +222,8 @@ Download the pretrained weights and sample DICOM data from Google Drive:
 **[⬇️ Download Weights & Sample Data](https://drive.google.com/drive/folders/1IXJYOVUrWsZqV3n2BKXotOfgk6Vsl3x9?usp=sharing)**
 
 Place the contents into the `weights/` and `ct_volumes/` directories respectively.
+
+The two classifier checkpoints (`slice_stack_classification.pth`, `proj_stack_classification.pth`) are the fold-2 models of the 5-fold cross-validation reported in the paper. They expect the preprocessing set in `config.py`: axial slicing, 256 × 256 input, no square padding; the projection-stack model takes maximum-intensity projections of 5-slice slabs.
 
 ---
 
@@ -320,18 +338,78 @@ To contextualize automated performance, we conducted an inter-observer study whe
 
 ---
 
+## ⚖️ Comparison with 3D segmentation
+
+The paper compares the projection-derived vertebra masks against masks from a 3D segmentation network. The 3D arm is included in [`seg3d_pipeline/`](seg3d_pipeline). It shares Stages 1–2 (spine VOI) and Stage 6 (score fusion) with the main pipeline and replaces Stages 3–5:
+
+| Stage | Projection arm (main pipeline) | 3D arm (`seg3d_pipeline/`) |
+|-------|--------------------------------|-----------------------------|
+| 3 | 2D U-Net on sagittal and coronal energy projections | 3D U-Net (ResNet18d encoder, the RSNA 2022 winning architecture) on the spine VOI resized to 128³; the five fold models are averaged |
+| 4 | Extruded 2D masks intersected | Tight crop of each vertebra label; voxels outside the label set to air (−1000 HU) |
+| 5 | Classifiers trained on projection-derived VOIs | Same architecture and preprocessing, trained on 3D-mask VOIs |
+
+Both segmenters are trained on the same 87 voxel-annotated patients (`folds/segmentation_folds.csv`). The released classifiers of both arms are the fold-2 models.
+
+```bash
+# both arms on one study
+python compare_pipelines.py --dicom-dir "ct_volumes/your_study_id"
+
+# 3D arm only
+python compare_pipelines.py --dicom-dir "ct_volumes/your_study_id" --arms 3d
+```
+
+Place the 3D-arm checkpoints (`seg3d_resnet18d_fold0.pth` … `seg3d_resnet18d_fold4.pth`, `slice_stack_classification_3dseg.pth`, `proj_stack_classification_3dseg.pth`) in `weights_3d/`. Results are saved to `results/<study_id>_comparison.npy`.
+
+---
+
+## 📐 Reproducing the evaluation
+
+### Cross-validation folds
+
+| File | Patients | Columns |
+|------|----------|---------|
+| [`folds/classification_folds.csv`](folds/classification_folds.csv) | 2,019 | `StudyInstanceUID`, `test_fold` (0–4), and `fold_0` … `fold_4` giving each patient's role (`train` / `val` / `test`) in each fold |
+| [`folds/segmentation_folds.csv`](folds/segmentation_folds.csv) | 87 (voxel-annotated subset) | `StudyInstanceUID`, `test_fold` (1–5), and `fold_1` … `fold_5` with the role in each fold |
+
+Splits are patient-wise: all vertebrae of a patient share a split. Per classification fold there are 1,292–1,293 training, 323 validation and 403–404 test patients; per segmentation fold 56 training, 13–14 validation and 17–18 test patients. Each patient is in the test split of exactly one fold, and reported metrics are the mean ± SD of the five test folds.
+
+The released classifier weights are the fold-2 models, so `fold_2 == "test"` patients are unseen by them.
+
+### Confidence intervals and significance
+
+[`stats/ci95.py`](stats/ci95.py) implements the analyses used for the reported 95% confidence intervals:
+
+- **Paired comparison of two pipelines** (AUPRC, ROC-AUC; all vertebrae, patient level, optionally per vertebra level):
+  - **Fold-wise paired t-test** on the five per-fold differences (df = 4): mean difference, two-sided 95% CI, p-value.
+  - **Patient-clustered paired bootstrap:** within each fold, patients are resampled with replacement, keeping all their vertebrae. Both pipelines are scored on the same resample, per fold and then averaged over folds. 2,000 replicates, seed 42, percentile 95% CI.
+- **Subgroup difference** of a per-instance score, e.g. segmentation Dice of fractured vs non-fractured vertebrae. The same patient-clustered bootstrap is used, reported per level, as the mean of levels, pooled, and fold-wise.
+
+Input is a CSV of out-of-fold predictions, one row per vertebra:
+
+```bash
+# columns: patient_id, fold, vertebra, label, <score of pipeline A>, <score of pipeline B>
+python -m stats.ci95 paired predictions.csv --score-a proposed --score-b baseline --per-level --out paired_ci.csv
+
+# columns: patient_id, fold, vertebra, <group 0/1>, <value>, optional view
+python -m stats.ci95 subgroup dice.csv --value dice --group fractured --view view --out subgroup_ci.csv
+```
+
+Differences are A − B (or group 1 − group 0) in percentage points; give a vertebra without a prediction the score 0.
+
+---
+
 ## 📝 Citation
 
 If you find this work useful, please cite:
 
 ```bibtex
-@article{madhurja2025cervical,
+@article{madhurja2026cervical,
   title   = {Tracing 3D Anatomy in 2D Strokes: A Multi-Stage Projection-Driven 
              Approach to Cervical Spine Fracture Identification},
   author  = {Madhurja, Fabi Nahian and Sarmun, Rusab and Chowdhury, Muhammad E. H. 
              and Mushtak, Adam and Al-Hashimi, Israa and Zoghoul, Sohaib Bassam},
   journal = {arXiv preprint arXiv:2601.15235},
-  year    = {2025},
+  year    = {2026},
   url     = {https://arxiv.org/abs/2601.15235}
 }
 ```

@@ -386,8 +386,9 @@ class PipelineWorker(QThread):
 
     def _run(self) -> None:
         volume, _, _ = load_dicom_volume(self.dicom_dir)
-        volume = apply_window(volume, BONE_WINDOW[0], BONE_WINDOW[1])
+        # Interpolate in HU first, then window (training volumes were interpolated before windowing).
         volume = interpolate_depth(volume, TARGET_SLICES)
+        volume = apply_window(volume, BONE_WINDOW[0], BONE_WINDOW[1])
         self.stage_data.emit(-1, {"volume": volume})
 
         self.stage_started.emit(0)

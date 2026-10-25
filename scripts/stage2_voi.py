@@ -12,6 +12,7 @@ the segmentation stage.
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 
 import cv2
 import numpy as np
@@ -23,7 +24,7 @@ from utils import clahe_volume, normalize_slice
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["detect_voi"]
+__all__ = ["detect_voi", "detect_view"]
 
 
 def _projection_to_bgr(proj: np.ndarray) -> np.ndarray:
@@ -35,7 +36,9 @@ def _projection_to_bgr(proj: np.ndarray) -> np.ndarray:
     Returns:
         uint8 BGR array of shape ``(H, W, 3)``.
     """
-    return cv2.cvtColor((proj * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+    # Same quantisation as the PNGs the detectors were run on (matplotlib grey colormap).
+    grey = np.clip((proj * 256).astype(np.int64), 0, 255).astype(np.uint8)
+    return cv2.cvtColor(grey, cv2.COLOR_GRAY2BGR)
 
 
 def _yolo_bbox(
@@ -65,6 +68,21 @@ def _yolo_bbox(
     x_c *= iw; y_c *= ih; w *= iw; h *= ih
     return (int(y_c - h / 2), int(y_c + h / 2),
             int(x_c - w / 2), int(x_c + w / 2))
+
+
+@lru_cache(maxsize=None)
+def _yolo_model(view: str) -> YOLO:
+    """Load (once) the YOLO detector for *view*."""
+    return YOLO(YOLO_WEIGHTS[view])
+
+
+def detect_view(projection: np.ndarray, view: str) -> tuple[int, int, int, int]:
+    """Detect the cervical spine on one ``[0, 1]`` projection.
+
+    Returns:
+        Bounding box as ``(y_min, y_max, x_min, x_max)`` in pixel coords.
+    """
+    return _yolo_bbox(_projection_to_bgr(projection), _yolo_model(view))
 
 
 def _build_voi(
@@ -136,11 +154,9 @@ def detect_voi(
         ``(voi, voi_projections)`` where ``voi`` is the cropped sub-volume
         and ``voi_projections`` are energy projections ready for Stage 3.
     """
-    models = {view: YOLO(w) for view, w in YOLO_WEIGHTS.items()}
-
     bboxes: dict[str, tuple[int, int, int, int]] = {}
     for view in ("sagittal", "coronal", "axial"):
-        bboxes[view] = _yolo_bbox(_projection_to_bgr(projections[view]), models[view])
+        bboxes[view] = detect_view(projections[view], view)
         logger.info("  %s bbox: %s", view, bboxes[view])
 
     voi = _build_voi(bboxes, volume)

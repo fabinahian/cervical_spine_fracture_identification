@@ -41,11 +41,12 @@ def _vertebra_score_fusion(
     for label in VERTEBRA_LABELS:
         p1 = m1.get(label, float("nan"))
         p2 = m2.get(label, float("nan"))
-        if np.isnan(p1) or np.isnan(p2):
-            unified, pred = float("nan"), 0
-        else:
-            unified = (p1 + p2) / 2.0
-            pred = int(unified >= 0.5)
+        # A vertebra without a VOI is scored as non-fractured with probability 0
+        # (same rule as the reported evaluation).
+        p1 = 0.0 if np.isnan(p1) else p1
+        p2 = 0.0 if np.isnan(p2) else p2
+        unified = (p1 + p2) / 2.0
+        pred = int(unified >= 0.5)
         out[label] = {"p1": p1, "p2": p2, "unified_score": unified, "prediction": pred}
 
     return out

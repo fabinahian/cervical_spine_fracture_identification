@@ -4,7 +4,8 @@ model.py
 CNN-Transformer architecture for vertebra-level fracture classification.
 
 The backbone (EfficientNetV2-S) independently encodes each of the N_SLICE
-groups of IN_CHANS adjacent sagittal slices. The resulting feature sequence
+groups of IN_CHANS adjacent axial slices (slice-stack model) or
+maximum-intensity projections (projection-stack model). The resulting feature sequence
 is refined by a 2-layer Transformer Encoder with sinusoidal positional
 encoding, then decoded by an MLP head into per-group fracture logits.
 """

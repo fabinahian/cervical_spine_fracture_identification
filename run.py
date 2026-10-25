@@ -153,8 +153,9 @@ def run_pipeline(dicom_dir: str, save_intermediates: bool = False) -> dict:
         return out
 
     volume, _, _ = load_dicom_volume(dicom_dir)
-    volume = apply_window(volume, BONE_WINDOW[0], BONE_WINDOW[1])
+    # Interpolate in HU first, then window (training volumes were interpolated before windowing).
     volume = interpolate_depth(volume, TARGET_SLICES)
+    volume = apply_window(volume, BONE_WINDOW[0], BONE_WINDOW[1])
 
     projections         = step("Stage 1 — Variance projections",    generate_projections, volume)
     voi, voi_proj       = step("Stage 2 — YOLO detection + VOI",    detect_voi, projections, volume)

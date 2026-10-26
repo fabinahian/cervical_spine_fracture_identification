@@ -2,7 +2,7 @@
 
 # Tracing 3D Anatomy in 2D Strokes
 
-### A Multi-Stage Projection-Driven Approach to Cervical Spine Fracture Identification
+### Can Projection-Derived Masks Replace 3D Segmentation for Cervical Spine Fracture Recognition?
 
 [![arXiv](https://img.shields.io/badge/arXiv-2601.15235-b31b1b.svg)](https://arxiv.org/abs/2601.15235)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -17,7 +17,7 @@
 
 ## 🔬 Overview
 
-This repository provides the official implementation for detecting cervical vertebra (C1–C7) fractures from CT volumes using a novel **projection-driven pipeline**. Instead of relying on full 3D segmentation networks, we approximate 3D vertebra volumes through optimized 2D axial, sagittal, and coronal projections—reducing the problem dimensionality while preserving the anatomical context necessary for accurate fracture identification.
+This repository provides the official implementation for detecting cervical vertebra (C1–C7) fractures from CT volumes using a **projection-driven pipeline**. Instead of relying on full 3D segmentation networks, we approximate 3D vertebra volumes from optimized 2D projections (axial, sagittal and coronal for localization; sagittal and coronal for vertebra segmentation), and test whether these approximate masks retain enough anatomical context for fracture recognition.
 
 <div align="center">
 <img src="assets/pipeline.png" alt="Pipeline Overview" width="90%"/>
@@ -25,9 +25,10 @@ This repository provides the official implementation for detecting cervical vert
 
 ### Key Contributions
 
+- **Matched Comparison with 3D Segmentation**: Projection-derived and 3D-segmentation masks evaluated under the same classifier, folds and paired statistics (fold-wise t-test and patient-clustered bootstrap)
 - **Projection-Driven VOI Extraction**: Traces 3D cervical anatomy using variance and energy-based 2D projections, reconstructing approximate 3D vertebra masks from 2D localization and multi-label segmentation
-- **2.5D Spatio-Sequential CNN-Transformer**: A novel ensemble architecture that captures spatial and sequential context across vertebra volumes for fracture classification
-- **Dimensionality Reduction**: Reformulates 3D segmentation as a 2D projection problem, offering an alternative pathway that sidesteps dense volumetric processing
+- **2.5D Spatio-Sequential CNN-Transformer**: An ensemble of two 2.5D models that captures spatial and sequential context across vertebra volumes for fracture classification
+- **Lower-Dimensional Segmentation**: Vertebra segmentation runs on two 2D projections (33.6 GFLOPs against 836.8 for the 3D U-Net of the RSNA 2022 winning solution); the saving applies to the segmentation stage only
 - **Clinical Validation**: Inter-observer study with three expert radiologists using Cohen's κ and Fleiss' κ to benchmark model performance against human readers
 - **Clinical Realism**: Validated on the highly imbalanced RSNA 2022 dataset without artificial balancing
 
@@ -41,6 +42,8 @@ Evaluated on the [RSNA 2022 Cervical Spine Fracture Detection](https://www.kaggl
 |-------|----------|-----------|-------------|-------------|----|---------|-------|
 | **Vertebra** | 94.51 ± 0.69 | 84.16 ± 4.82 | 57.49 ± 4.30 | 98.74 ± 0.47 | 68.15 ± 2.80 | 91.63 ± 0.99 | 75.64 ± 1.37 |
 | **Patient** (adaptive threshold) | 83.06 ± 3.13 | 82.12 ± 4.64 | 82.51 ± 1.74 | 83.56 ± 4.75 | 82.28 ± 3.05 | 90.95 ± 1.47 | 92.00 ± 1.15 |
+
+**Projection-derived vs 3D-segmentation masks.** With the classifier, training protocol and folds fixed, replacing 3D-segmentation masks with projection-derived masks changed AUPRC by +1.03 points per vertebra and +0.65 per patient; the fold-wise 95% CI excluded vertebra-level losses larger than 1.46 points. Against the reproduced RSNA 2022 winning solution (single model), AUPRC was 75.64% vs 76.19% per vertebra and 92.00% vs 91.86% per patient (loss bound 2.81 points). No AUPRC difference was statistically significant.
 
 The fold assignment is provided in [`folds/`](folds) and the statistical code in [`stats/`](stats) (see [Reproducing the evaluation](#-reproducing-the-evaluation)).
 
@@ -60,8 +63,8 @@ A key component of this work is the **inter-observer agreement study** comparing
 
 ### Agreement Metrics
 
-- **Cohen's Kappa (κ)**: Pairwise agreement between model and each individual radiologist
-- **Fleiss' Kappa (κ)**: Multi-rater agreement across all three radiologists and the model
+- **Cohen's Kappa (κ)**: Agreement of the model and of each radiologist with the dataset reference standard, and pairwise agreement between radiologists
+- **Fleiss' Kappa (κ)**: Multi-rater agreement among the three radiologists and the reference standard
 
 This inter-observer analysis contextualizes model performance within the inherent variability of expert human readers, providing clinically meaningful benchmarks beyond standard machine learning metrics.
 
@@ -167,11 +170,11 @@ python visualize.py --dicom-dir "ct_volumes/your_study_id"
 ├── stats/                    # 95% CIs and significance tests used in the paper
 │   └── ci95.py
 │
-├── seg3d_pipeline/           # Comparison arm: 3D U-Net segmentation instead of projections
+├── seg3d_pipeline/           # Comparison pipeline: 3D U-Net segmentation instead of projections
 │   ├── config_3d.py
 │   ├── model_3d.py
 │   └── stages_3d.py
-├── compare_pipelines.py      # Run both arms on one study, side by side
+├── compare_pipelines.py      # Run both pipelines on one study, side by side
 │
 ├── scripts/                  # Modular stage implementations
 │   ├── stage1_projections.py
@@ -182,7 +185,7 @@ python visualize.py --dicom-dir "ct_volumes/your_study_id"
 │   └── stage6_ensemble.py
 │
 ├── weights/                  # Pretrained model weights (download separately)
-├── weights_3d/               # Weights of the 3D-segmentation comparison arm (download separately)
+├── weights_3d/               # Weights of the 3D-segmentation comparison pipeline (download separately)
 ├── ct_volumes/               # Input DICOM studies (one folder per study)
 ├── results/                  # Final predictions (created at runtime)
 ├── intermediates/            # Stage outputs (with --save-intermediates)
@@ -334,31 +337,31 @@ Our fracture classifier combines:
 
 ### Inter-Observer Benchmarking
 
-To contextualize automated performance, we conducted an inter-observer study where three expert radiologists independently assessed fracture presence. Model predictions were compared against each reader using Cohen's κ and across all raters using Fleiss' κ, situating algorithmic accuracy within the spectrum of human expert variability.
+To contextualize automated performance, we conducted an inter-observer study where three expert radiologists independently assessed fracture presence. Each radiologist and the model were compared with the dataset reference standard using Cohen's κ, and agreement among the radiologists and the reference standard was measured with Fleiss' κ, situating algorithmic accuracy within the spectrum of human expert variability.
 
 ---
 
 ## ⚖️ Comparison with 3D segmentation
 
-The paper compares the projection-derived vertebra masks against masks from a 3D segmentation network. The 3D arm is included in [`seg3d_pipeline/`](seg3d_pipeline). It shares Stages 1–2 (spine VOI) and Stage 6 (score fusion) with the main pipeline and replaces Stages 3–5:
+The paper compares the projection-derived vertebra masks against masks from a 3D segmentation network. The 3D-segmentation pipeline is included in [`seg3d_pipeline/`](seg3d_pipeline). It shares Stages 1–2 (spine VOI) and Stage 6 (score fusion) with the main pipeline and replaces Stages 3–5:
 
-| Stage | Projection arm (main pipeline) | 3D arm (`seg3d_pipeline/`) |
+| Stage | Projection pipeline (main) | 3D-segmentation pipeline (`seg3d_pipeline/`) |
 |-------|--------------------------------|-----------------------------|
 | 3 | 2D U-Net on sagittal and coronal energy projections | 3D U-Net (ResNet18d encoder, the RSNA 2022 winning architecture) on the spine VOI resized to 128³; the five fold models are averaged |
 | 4 | Extruded 2D masks intersected | Tight crop of each vertebra label; voxels outside the label set to air (−1000 HU) |
 | 5 | Classifiers trained on projection-derived VOIs | Same architecture and preprocessing, trained on 3D-mask VOIs |
 
-Both segmenters are trained on the same 87 voxel-annotated patients (`folds/segmentation_folds.csv`). The released classifiers of both arms are the fold-2 models.
+Both segmenters are trained on the same 87 voxel-annotated patients (`folds/segmentation_folds.csv`). The released classifiers of both pipelines are the fold-2 models.
 
 ```bash
-# both arms on one study
+# both pipelines on one study
 python compare_pipelines.py --dicom-dir "ct_volumes/your_study_id"
 
-# 3D arm only
+# 3D-segmentation pipeline only
 python compare_pipelines.py --dicom-dir "ct_volumes/your_study_id" --arms 3d
 ```
 
-Place the 3D-arm checkpoints (`seg3d_resnet18d_fold0.pth` … `seg3d_resnet18d_fold4.pth`, `slice_stack_classification_3dseg.pth`, `proj_stack_classification_3dseg.pth`) in `weights_3d/`. Results are saved to `results/<study_id>_comparison.npy`.
+Place the 3D-segmentation pipeline checkpoints (`seg3d_resnet18d_fold0.pth` … `seg3d_resnet18d_fold4.pth`, `slice_stack_classification_3dseg.pth`, `proj_stack_classification_3dseg.pth`) in `weights_3d/`. Results are saved to `results/<study_id>_comparison.npy`.
 
 ---
 
